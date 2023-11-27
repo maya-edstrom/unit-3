@@ -33,13 +33,13 @@ function setMap() {
         promises.push(d3.json("data/MNCounties.topojson"));
 
     Promise.all(promises).then(callback);
-}
+
     function callback(data) {
 
         let csvData = data[0],
-            allmn = data[1]
-        mn = data[2];
-
+            allmn = data[1],
+            mn = data[2];
+        
         let allMNCounties = topojson.feature(allmn, allmn.objects.AllMNCounties).features,
             MNCounties = topojson.feature(mn, mn.objects.MNCounties).features;
 
@@ -57,6 +57,6 @@ function setMap() {
             })
             .attr("d", path);
 
-    }
+    }}
 
 
