@@ -1,156 +1,99 @@
-//execute script when window is loaded
-window.onload = function(){
+(function(){
+//pseudo-global variables
+    var attrArray = ["varA", "varB", "varC", "varD", "varE"]; //list of attributes
+    var expressed = attrArray[0]; //initial attribute
 
-    //SVG dimension variables
-    let w = 900, h = 500;
+//begin script when window loads
+    window.onload = setMap;
 
-    let container = d3.select("body") //get the <body> element from the DOM
-        .append("svg") //put a new svg in the body
-        .attr("width", w) //assign the width
-        .attr("height", h) //assign the height
-        .attr("class", "container") //always assign a class (as the block name) for styling and future selection
-        .style("background-color", "rgba(0,0,0,0.2)");
+//set up choropleth map
+    function setMap() {
+        //map frame dimensions
+        let width = 600,
+            height = 460;
 
-    //innerRect block
-    let innerRect = container.append("rect") //put a new rect in the svg
-        .datum(400) //a single value is a DATUM
-        .attr("width", function(d){ //rectangle width
-            return d * 2; //400 * 2 = 800
-        })
-        .attr("height", function(d){ //rectangle height
-            return d; //400
-        })
-        .attr("class", "innerRect") //class name
-        .attr("x", 50) //position from left on the x (horizontal) axis
-        .attr("y", 50) //position from top on the y (vertical) axis
-        .style("fill", "#FFFFFF"); //fill color
+        //create new svg container for the map
+        let map = d3.select("#container")
+            .append("svg")
+            .attr("class", "map")
+            .attr("width", width)
+            .attr("height", height);
 
-    let title = container.append("text")
-        .attr("class", "title")
-        .attr("text-anchor", "middle")
-        .attr("x", 450)
-        .attr("y", 30)
-        .text("City Populations");
+        //create Albers equal area conic projection centered on Minnesota
+        let projection = d3.geoAlbers()
+            .center([-94.5, 46.2])
+            .rotate([0, 0, 0])
+            .parallels([-46.5, 46.5])
+            .scale(3000)
+            .translate([width / 2, height / 2]);
 
-    let cityPop = [
-        {
-            city: 'Madison',
-            population: 233209
-        },
-        {
-            city: 'Milwaukee',
-            population: 594833
-        },
-        {
-            city: 'Green Bay',
-            population: 104057
-        },
-        {
-            city: 'Superior',
-            population: 27244
-        }
-    ];
+        let path = d3.geoPath()
+            .projection(projection);
+
+        //use Promise.all to parallelize asynchronous data loading
+        let promises = [];
+        promises.push(d3.csv("data/unitsData.csv"));
+        promises.push(d3.json("data/mn-county-2010.topojson"));
+        promises.push(d3.json("data/mn-county-2010.topojson"));
+
+        Promise.all(promises).then(callback);
+
+        function callback(data) {
+            let csvData = data[0],
+                allmn = data[1];
+            mn = data[2];
+
+            console.log(allmn);
 
 
-    let x = d3.scaleLinear() //create the scale
-        .range([90, 750]) //output min and max
-        .domain([0, 3]); //input min and max
+            let allMNCounties = topojson.feature(allmn, allmn.objects.mncounty2010).features,
+                MNCounties = topojson.feature(mn, mn.objects.mncounty2010).features;
 
-    let minPop = d3.min(cityPop, function(d){
-        return d.population;
-    });
+            //variables for data join
+            var attrArray = ["varA", "varB", "varC", "varD", "varE"];
 
-    //find the maximum value of the array
-    let maxPop = d3.max(cityPop, function(d){
-        return d.population;
-    });
+            //loop through csv to assign each set of csv attribute values to geojson region
+            for (var i = 0; i < csvData.length; i++) {
+                var csvRegion = csvData[i]; //the current region
+                var csvKey = csvRegion.adm1_code; //the CSV primary key
 
-    //scale for circles center y coordinate
-    let y = d3.scaleLinear()
-        .range([450, 50])
-        .domain([0, 700000]);
+                //loop through geojson regions to find correct region
+                for (var a = 0; a < MNCounties.length; a++) {
 
-    let color = d3.scaleLinear()
-        .range([
-            "#FDBE85",
-            "#D94701"
-        ])
-        .domain([
-            minPop,
-            maxPop
-        ]);
+                    var geojsonProps = MNCounties[a].properties; //the current region geojson properties
+                    var geojsonKey = geojsonProps.adm1_code; //the geojson primary key
 
-    let circles = container.selectAll(".circles") //create an empty selection
-        .data(cityPop) //here we feed in an array
-        .enter() //one of the great mysteries of the universe
-        .append("circle") //inspect the HTML--holy crap, there's some circles there
-        .attr("class", "circles")
-        .attr("id", function(d){
-            return d.city;
-        })
-        .attr("r", function(d){
-            //calculate the radius based on population value as circle area
-            let area = d.population * 0.01;
-            return Math.sqrt(area/Math.PI);
-        })
-        .attr("cx", function(d, i){
-            //use the scale generator with the index to place each circle horizontally
-            return x(i);
-        })
-        .attr("cy", function(d){
-            return y(d.population);
-        })
-        .style("fill", function(d, i){ //add a fill based on the color scale generator
-            return color(d.population);
-        })
-        .style("stroke", "#000"); //black circle stroke
+                    //where primary keys match, transfer csv data to geojson properties object
+                    if (geojsonKey == csvKey) {
 
-    let yAxis = d3.axisLeft(y);
-    let axis = container.append("g")
-        .attr("class", "axis")
-        .attr("transform", "translate(50, 0)")
-
-    yAxis(axis);
-
-
-    let labels = container.selectAll(".labels")
-        .data(cityPop)
-        .enter()
-        .append("text")
-        .attr("class", "labels")
-        .attr("text-anchor", "left")
-        .attr("y", function(d){
-            if (d.city === 'Superior') {
-                return y(d.population) - 20;
-            } else {
-
+                        //assign all attributes and values
+                        attrArray.forEach(function (attr) {
+                            var val = parseFloat(csvRegion[attr]); //get csv attribute value
+                            geojsonProps[attr] = val; //assign attribute and value to geojson properties
+                        });
+                    }
+                }
             }
-            //vertical position centered on each circle
-            return y(d.population) + 10;
-        })
 
-    //first line of label
-    let nameLine = labels.append("tspan")
-        .attr("class", "nameLine")
-        .attr("x", function(d,i){
-            //horizontal position to the right of each circle
-            return x(i) + Math.sqrt(d.population * 0.01 / Math.PI) + 5;
-        })
-        .text(function(d){
-            return d.city;
-        });
 
-    let format = d3.format(",");
+            let allCounties = map.append("path")
+                .datum(allMNCounties)
+                .attr("class", "counties")
+                .attr("d", path)
+                .attr("fill", "#ccc") // set a fill color
+                .attr("stroke", "#333"); // set a stroke color
 
-    //second line of label
-    let popLine = labels.append("tspan")
-        .attr("class", "popLine")
-        .attr("x", function(d,i){
-            return x(i) + Math.sqrt(d.population * 0.01 / Math.PI) + 5;
-        })
-        .attr("dy", "15") //vertical offset
-        .text(function(d){
-            return "Pop. " + format(d.population); //use format generator to format numbers
-        });
+            let selectCounties = map.selectAll(".selectCounties")
+                .data(MNCounties)
+                .enter()
+                .append("path")
+                .attr("class", function (d) {
+                    return "regions " + d.properties.adm1_code;
+                })
+                .attr("d", path)
+                .attr("fill", "#ccc") // set a fill color
+                .attr("stroke", "#333"); // set a stroke color
+        }
+    }
+})();
 
-    };

@@ -1,10 +1,15 @@
+(function(){
+//pseudo-global variables
+var attrArray = ["varA", "varB", "varC", "varD", "varE"]; //list of attributes
+var expressed = attrArray[0]; //initial attribute
+
 //begin script when window loads
 window.onload = setMap;
 
 //set up choropleth map
 function setMap() {
     //map frame dimensions
-    let width = 600,
+    var width = 600,
         height = 460;
 
     //create new svg container for the map
@@ -14,11 +19,11 @@ function setMap() {
         .attr("width", width)
         .attr("height", height);
 
-   //create Albers equal area conic projection centered on Minnesota
+    //create Albers equal area conic projection centered on Minnesota
     let projection = d3.geoAlbers()
         .center([-94.5, 46.2])
         .rotate([0, 0, 0])
-        .parallels([-46.5, 46.5])        
+        .parallels([-46.5, 46.5])
         .scale(3000)
         .translate([width / 2, height / 2]);
 
@@ -36,13 +41,41 @@ function setMap() {
     function callback(data) {
         let csvData = data[0],
             allmn = data[1];
-            mn = data[2];
+        mn = data[2];
 
-            console.log(allmn);
 
-        
-    let allMNCounties = topojson.feature(allmn, allmn.objects.mncounty2010).features,
-    MNCounties = topojson.feature(mn, mn.objects.mncounty2010).features;
+        let allMNCounties = topojson.feature(allmn, allmn.objects.mncounty2010).features,
+            MNCounties = topojson.feature(mn, mn.objects.mncounty2010).features;
+
+
+        //variables for data join
+        var attrArray = ["varA", "varB", "varC", "varD", "varE"];
+
+        //loop through csv to assign each set of csv attribute values to geojson region
+        for (var i = 0; i < csvData.length; i++) {
+            var csvRegion = csvData[i]; //the current region
+            var csvKey = csvRegion.adm1_code; //the CSV primary key
+
+            //loop through geojson regions to find correct region
+            for (var a = 0; a < MNCounties.length; a++) {
+
+                var geojsonProps = MNCounties[a].properties; //the current region geojson properties
+                var geojsonKey = geojsonProps.adm1_code; //the geojson primary key
+
+                //where primary keys match, transfer csv data to geojson properties object
+                if (geojsonKey == csvKey) {
+
+                    //assign all attributes and values
+                    attrArray.forEach(function (attr) {
+                        var val = parseFloat(csvRegion[attr]); //get csv attribute value
+                        geojsonProps[attr] = val; //assign attribute and value to geojson properties
+
+
+                    });
+                }
+            }
+        }
+
 
         let allCounties = map.append("path")
             .datum(allMNCounties)
@@ -63,3 +96,5 @@ function setMap() {
             .attr("stroke", "#333"); // set a stroke color
     }
 }
+})();
+
