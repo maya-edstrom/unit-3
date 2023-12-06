@@ -9,7 +9,7 @@
 //set up choropleth map
     function setMap() {
         //map frame dimensions
-        let width = 600,
+        var width = 600,
             height = 460;
 
         //create new svg container for the map
@@ -43,11 +43,10 @@
                 allmn = data[1];
             mn = data[2];
 
-            console.log(allmn);
-
 
             let allMNCounties = topojson.feature(allmn, allmn.objects.mncounty2010).features,
                 MNCounties = topojson.feature(mn, mn.objects.mncounty2010).features;
+
 
             //variables for data join
             var attrArray = ["varA", "varB", "varC", "varD", "varE"];
@@ -70,6 +69,8 @@
                         attrArray.forEach(function (attr) {
                             var val = parseFloat(csvRegion[attr]); //get csv attribute value
                             geojsonProps[attr] = val; //assign attribute and value to geojson properties
+
+
                         });
                     }
                 }
