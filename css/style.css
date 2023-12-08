@@ -16,3 +16,9 @@
     font-size: 1.5em;
     font-weight: bold;
 }
+
+.selectCounties {
+    stroke: #000;
+    stroke-width: 0.5px;
+    stroke-linecap: round;
+}

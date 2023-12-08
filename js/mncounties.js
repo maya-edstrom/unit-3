@@ -89,7 +89,7 @@
                 .enter()
                 .append("path")
                 .attr("class", function (d) {
-                    return "regions " + d.properties.adm1_code;
+                    return "selectCounties" + d.properties.adm1_code;
                 })
                 .attr("d", path)
                 .attr("fill", "#ccc") // set a fill color
@@ -120,16 +120,26 @@
                 for (var i=0; i<data.length; i++){
                     var val = parseFloat(data[i][expressed]);
                     domainArray.push(val);
-                };
+                }
 
                 //assign array of expressed values as scale domain
                 colorScale.domain(domainArray);
 
                 return colorScale;
-            };
+            }
 
             function setEnumerationUnits(data, map, path, colorScale) {
-                // your implementation here
+                var selectCounties = map.selectAll(".selectCounties")
+                    .data(MNCounties)
+                    .enter()
+                    .append("path")
+                    .attr("class", function(d){
+                        return ".selectCounties" + d.properties.adm1_code;
+                    })
+                    .attr("d", path)
+                    .style("fill", function(d){
+                        return colorScale(d.properties[expressed]);
+                    });
             }
 
 

@@ -94,7 +94,55 @@
                 .attr("d", path)
                 .attr("fill", "#ccc") // set a fill color
                 .attr("stroke", "#333"); // set a stroke color
+
+            //create the color scale
+            var colorScale = makeColorScale(MNCounties);
+
+            //add enumeration units to the map
+            setEnumerationUnits(allMNCounties, map, path, colorScale);
+
+            //function to create color scale generator
+            function makeColorScale(data){
+                var colorClasses = [
+                    "#D4B9DA",
+                    "#C994C7",
+                    "#DF65B0",
+                    "#DD1C77",
+                    "#980043"
+                ];
+
+                //create color scale generator
+                var colorScale = d3.scaleQuantile()
+                    .range(colorClasses);
+
+                //build array of all values of the expressed attribute
+                var domainArray = [];
+                for (var i=0; i<data.length; i++){
+                    var val = parseFloat(data[i][expressed]);
+                    domainArray.push(val);
+                }
+
+                //assign array of expressed values as scale domain
+                colorScale.domain(domainArray);
+
+                return colorScale;
+            }
+
+            function setEnumerationUnits(data, map, path, colorScale) {
+                var regions = map.selectAll(".regions")
+                    .data(MNCounties)
+                    .enter()
+                    .append("path")
+                    .attr("class", function(d){
+                        return "regions " + d.properties.adm1_code;
+                    })
+                    .attr("d", path)
+                    .style("fill", function(d){
+                        return colorScale(d.properties[expressed]);
+                    });
+            }
+
+
         }
     }
 })();
-
