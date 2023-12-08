@@ -9,7 +9,7 @@
 //set up choropleth map
     function setMap() {
         //map frame dimensions
-        var width = 600,
+        var width = window.innerWidth * 0.5,
             height = 460;
 
         //create new svg container for the map
@@ -60,9 +60,8 @@
                 for (var a = 0; a < MNCounties.length; a++) {
 
                     var geojsonProps = MNCounties[a].properties; //the current region geojson properties
-                    console.log("geojsonProps",geojsonProps);
+
                     var geojsonKey = geojsonProps.COUNTY; //the geojson primary key
-                    console.log(geojsonKey);
 
                     //where primary keys match, transfer csv data to geojson properties object
                     if (geojsonKey == csvKey) {
@@ -91,7 +90,7 @@
                 .enter()
                 .append("path")
                 .attr("class", function (d) {
-                    return "selectCounties" + d.properties.adm1_code;
+                    return ".selectCounties" + d.properties.adm1_code;
                 })
                 .attr("d", path)
                 .attr("fill", "#ccc") // set a fill color
@@ -100,13 +99,16 @@
             //create the color scale
             var colorScale = makeColorScale(MNCounties, expressed);
 
-            console.log('hi',expressed);
 
             //add enumeration units to the map
-            setEnumerationUnits(allMNCounties, map, path, colorScale, expressed);
+            setEnumerationUnits(MNCounties, map, path, colorScale, expressed);
+
+
+            //add coordinated visualization to the map
+            setChart(csvData, colorScale);
 
             //function to create color scale generator
-            function makeColorScale(data, expressed){
+            function makeColorScale(data, expressed) {
                 var colorClasses = [
                     "#D4B9DA",
                     "#C994C7",
@@ -121,7 +123,7 @@
 
                 //build array of all values of the expressed attribute
                 var domainArray = [];
-                for (var i=0; i<data.length; i++){
+                for (var i = 0; i < data.length; i++) {
                     var val = parseFloat(data[i][expressed]);
                     domainArray.push(val);
                 }
@@ -129,8 +131,58 @@
                 //assign array of expressed values as scale domain
                 colorScale.domain(domainArray);
 
+                console.log(colorScale)
+
                 return colorScale;
+
             }
+
+
+//function to create coordinated bar chart
+            function setChart(csvData, colorScale){
+                //chart frame dimensions
+                var chartWidth = window.innerWidth * 0.425,
+                    chartHeight = 460;
+
+                //create a second svg element to hold the bar chart
+                var chart = d3.select("body")
+                    .append("svg")
+                    .attr("width", chartWidth)
+                    .attr("height", chartHeight)
+                    .attr("class", "chart");
+
+                //create a scale to size bars proportionally to frame
+                var yScale = d3.scaleLinear()
+                    .range([0, chartHeight])
+                    .domain([0, 105]);
+
+                //set bars for each province
+                var bars = chart.selectAll(".bars")
+                    .data(csvData)
+                    .enter()
+                    .append("rect")
+                    .sort(function(a, b){
+                        return a[expressed]-b[expressed]
+                    })
+                    .attr("class", function(d){
+                        return "bars " + d.adm1_code;
+                    })
+                    .attr("width", chartWidth / csvData.length - 1)
+                    .attr("x", function(d, i){
+                        return i * (chartWidth / csvData.length);
+                    })
+                    .attr("height", function(d){
+                        return yScale(parseFloat(d[expressed]));
+                    })
+                    .attr("y", function(d){
+                        return chartHeight - yScale(parseFloat(d[expressed]))
+
+                            .style("fill", function(d){
+                                return colorScale(d[expressed]);
+                            });
+
+                    });
+            };
 
             function setEnumerationUnits(data, map, path, colorScale, expressed) {
                 var selectCounties = map.selectAll(".selectCounties")

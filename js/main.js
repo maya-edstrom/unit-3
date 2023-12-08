@@ -60,7 +60,8 @@
                 for (var a = 0; a < MNCounties.length; a++) {
 
                     var geojsonProps = MNCounties[a].properties; //the current region geojson properties
-                    var geojsonKey = geojsonProps.adm1_code; //the geojson primary key
+
+                    var geojsonKey = geojsonProps.COUNTY; //the geojson primary key
 
                     //where primary keys match, transfer csv data to geojson properties object
                     if (geojsonKey == csvKey) {
@@ -89,20 +90,21 @@
                 .enter()
                 .append("path")
                 .attr("class", function (d) {
-                    return "regions " + d.properties.adm1_code;
+                    return ".selectCounties" + d.properties.adm1_code;
                 })
                 .attr("d", path)
                 .attr("fill", "#ccc") // set a fill color
                 .attr("stroke", "#333"); // set a stroke color
 
             //create the color scale
-            var colorScale = makeColorScale(MNCounties);
+            var colorScale = makeColorScale(MNCounties, expressed);
+
 
             //add enumeration units to the map
-            setEnumerationUnits(allMNCounties, map, path, colorScale);
+            setEnumerationUnits(allMNCounties, map, path, colorScale, expressed);
 
             //function to create color scale generator
-            function makeColorScale(data){
+            function makeColorScale(data, expressed){
                 var colorClasses = [
                     "#D4B9DA",
                     "#C994C7",
@@ -125,19 +127,23 @@
                 //assign array of expressed values as scale domain
                 colorScale.domain(domainArray);
 
+                console.log(colorScale)
+
                 return colorScale;
+
             }
 
-            function setEnumerationUnits(data, map, path, colorScale) {
-                var regions = map.selectAll(".regions")
+            function setEnumerationUnits(data, map, path, colorScale, expressed) {
+                var selectCounties = map.selectAll(".selectCounties")
                     .data(MNCounties)
                     .enter()
                     .append("path")
                     .attr("class", function(d){
-                        return "regions " + d.properties.adm1_code;
+                        return ".selectCounties" + d.properties.adm1_code;
                     })
                     .attr("d", path)
                     .style("fill", function(d){
+                        //  console.log(d);
                         return colorScale(d.properties[expressed]);
                     });
             }
