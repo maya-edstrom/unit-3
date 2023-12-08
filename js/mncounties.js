@@ -60,7 +60,9 @@
                 for (var a = 0; a < MNCounties.length; a++) {
 
                     var geojsonProps = MNCounties[a].properties; //the current region geojson properties
-                    var geojsonKey = geojsonProps.adm1_code; //the geojson primary key
+                    console.log("geojsonProps",geojsonProps);
+                    var geojsonKey = geojsonProps.COUNTY; //the geojson primary key
+                    console.log(geojsonKey);
 
                     //where primary keys match, transfer csv data to geojson properties object
                     if (geojsonKey == csvKey) {
@@ -96,13 +98,15 @@
                 .attr("stroke", "#333"); // set a stroke color
 
             //create the color scale
-            var colorScale = makeColorScale(MNCounties);
+            var colorScale = makeColorScale(MNCounties, expressed);
+
+            console.log('hi',expressed);
 
             //add enumeration units to the map
-            setEnumerationUnits(allMNCounties, map, path, colorScale);
+            setEnumerationUnits(allMNCounties, map, path, colorScale, expressed);
 
             //function to create color scale generator
-            function makeColorScale(data){
+            function makeColorScale(data, expressed){
                 var colorClasses = [
                     "#D4B9DA",
                     "#C994C7",
@@ -128,7 +132,7 @@
                 return colorScale;
             }
 
-            function setEnumerationUnits(data, map, path, colorScale) {
+            function setEnumerationUnits(data, map, path, colorScale, expressed) {
                 var selectCounties = map.selectAll(".selectCounties")
                     .data(MNCounties)
                     .enter()
@@ -138,6 +142,7 @@
                     })
                     .attr("d", path)
                     .style("fill", function(d){
+                        //  console.log(d);
                         return colorScale(d.properties[expressed]);
                     });
             }
