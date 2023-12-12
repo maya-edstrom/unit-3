@@ -1,41 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>MN Counties</title>
+    <!-- External stylesheet links -->
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/topojson.js"></script>
+    <!--[if IE<9]>
+        <link rel="stylesheet" href="css/style.ie.css">
+    <![endif]-->
+    
+    <!-- Internal styles can be placed here within <style> tags -->
+    <style>
+        #content {
+            display: flex;
+        }
 
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width">
-            <title>MN Counties</title>
+        #map-container, #chart-container {
+            flex: 1; /* This will make both containers take up equal space */
+            margin: 10px; /* This adds some space around the containers */
+        }
+    </style>
+</head>
 
-        <!--put your external stylesheet links here-->
-        <link rel="stylesheet" href="css/style.css">
-        <script src="js/topojson.js"></script>
-        <!--[if IE<9]>
-            <link rel="stylesheet" href="css/style.ie.css">
-        <![endif]-->
+<body>
+    <!-- Initial page content -->
+    <div id="content">
+        <div id="map-container"></div>
+        <div id="chart-container"></div>
+    </div>
 
-         <!--you can also place internal styles here;
-             place these within <style> tags-->
-        
-    </head>
-
-    <body>
-        <!--put your initial page content here-->
-        <div id="container"></div>
-
-        <!--you can also use this space for internal scripts;
-        place these within <script> tags-->
-
-        <!--put your external script links here-->
-        <script src="https://ajax.googleapis.com/ajax/libs/d3js/7.8.5/d3.min.js"></script>
-        
-
-
-        <script type="text/javascript" src="js/mncounties.js"></script>
-
-        <!-- Old code -->
-        <!--<script type="text/javascript" src="js/bubblechart.js"></script>
-        <script type="text/javascript" src="js/main.js"></script>
-        <script type="module">-->  
-
-    </body>
+    <!-- External script links -->
+    <script src="https://ajax.googleapis.com/ajax/libs/d3js/7.8.5/d3.min.js"></script>
+    <script type="text/javascript" src="js/mncounties.js"></script>
+</body>
 </html>

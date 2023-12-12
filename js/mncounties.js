@@ -1,25 +1,25 @@
 (function(){
-//pseudo-global variables
-    var attrArray = ["varA", "varB", "varC", "varD", "varE"]; //list of attributes
-    var expressed = attrArray[0]; //initial attribute
+    // Variables that will be used throughout the script
+    var attrArray = ["varA", "varB", "varC", "varD", "varE"]; // List of attributes
+    var expressed = attrArray[0]; // Initial attribute for visualization
 
-//begin script when window loads
-    window.onload = setMap;
+    // Add event listener to load the map once the window is fully loaded
+    window.addEventListener('load', setMap);
 
-//set up choropleth map
+    // Function to set up the choropleth map
     function setMap() {
-        //map frame dimensions
+        // Map frame dimensions
         var width = window.innerWidth * 0.5,
             height = 460;
 
-        //create new svg container for the map
-        let map = d3.select("#container")
+        // Create new SVG container for the map within the map container
+        let map = d3.select("#map-container")
             .append("svg")
             .attr("class", "map")
             .attr("width", width)
             .attr("height", height);
 
-        //create Albers equal area conic projection centered on Minnesota
+        // Create Albers equal area conic projection centered on Minnesota
         let projection = d3.geoAlbers()
             .center([-94.5, 46.2])
             .rotate([0, 0, 0])
@@ -27,179 +27,137 @@
             .scale(3000)
             .translate([width / 2, height / 2]);
 
+        // Create a path generator using the projection
         let path = d3.geoPath()
             .projection(projection);
 
-        //use Promise.all to parallelize asynchronous data loading
+        // Load external data files asynchronously using Promise.all
         let promises = [];
-        promises.push(d3.csv("data/unitsData.csv"));
-        promises.push(d3.json("data/mn-county-2010.topojson"));
-        promises.push(d3.json("data/mn-county-2010.topojson"));
+        promises.push(d3.csv("data/unitsData.csv")); // CSV attributes
+        promises.push(d3.json("data/mn-county-2010.topojson")); // Spatial data
 
+        // Once all files are loaded, execute the callback function
         Promise.all(promises).then(callback);
 
         function callback(data) {
-            let csvData = data[0],
-                allmn = data[1];
-            mn = data[2];
+            // Unpack the data from the promises
+            let csvData = data[0], // CSV attributes
+                mn = data[1]; // TopoJSON data
 
+            // Transform TopoJSON to GeoJSON
+            let MNCounties = topojson.feature(mn, mn.objects.mncounty2010).features;
 
-            let allMNCounties = topojson.feature(allmn, allmn.objects.mncounty2010).features,
-                MNCounties = topojson.feature(mn, mn.objects.mncounty2010).features;
-
-
-            //variables for data join
-            var attrArray = ["varA", "varB", "varC", "varD", "varE"];
-
-            //loop through csv to assign each set of csv attribute values to geojson region
+            // Loop through the CSV to assign attribute values to GeoJSON regions
             for (var i = 0; i < csvData.length; i++) {
-                var csvRegion = csvData[i]; //the current region
-                var csvKey = csvRegion.adm1_code; //the CSV primary key
+                var csvRegion = csvData[i]; // Current CSV region
+                var csvKey = csvRegion.adm1_code; // CSV primary key
 
-                //loop through geojson regions to find correct region
+                // Loop through GeoJSON regions to find the correct region
                 for (var a = 0; a < MNCounties.length; a++) {
+                    var geojsonProps = MNCounties[a].properties; // Current GeoJSON properties
+                    var geojsonKey = geojsonProps.COUNTY; // GeoJSON primary key
 
-                    var geojsonProps = MNCounties[a].properties; //the current region geojson properties
-
-                    var geojsonKey = geojsonProps.COUNTY; //the geojson primary key
-
-                    //where primary keys match, transfer csv data to geojson properties object
+                    // Transfer CSV data to GeoJSON properties where primary keys match
                     if (geojsonKey == csvKey) {
-
-                        //assign all attributes and values
-                        attrArray.forEach(function (attr) {
-                            var val = parseFloat(csvRegion[attr]); //get csv attribute value
-                            geojsonProps[attr] = val; //assign attribute and value to geojson properties
-
-
+                        attrArray.forEach(function(attr){
+                            var val = parseFloat(csvRegion[attr]); // Get CSV attribute value
+                            geojsonProps[attr] = val; // Assign attribute and value to GeoJSON properties
                         });
                     }
                 }
             }
 
-
-            let allCounties = map.append("path")
-                .datum(allMNCounties)
-                .attr("class", "counties")
-                .attr("d", path)
-                .attr("fill", "#ccc") // set a fill color
-                .attr("stroke", "#333"); // set a stroke color
-
-            let selectCounties = map.selectAll(".selectCounties")
+            // Append all counties to the map SVG as paths
+            let counties = map.selectAll(".county")
                 .data(MNCounties)
                 .enter()
                 .append("path")
-                .attr("class", function (d) {
-                    return ".selectCounties" + d.properties.adm1_code;
-                })
+                .attr("class", "county")
                 .attr("d", path)
-                .attr("fill", "#ccc") // set a fill color
-                .attr("stroke", "#333"); // set a stroke color
+                .attr("fill", "#ccc") // Fill color
+                .attr("stroke", "#333"); // Stroke color
 
-            //create the color scale
+            // Create the color scale for the enumeration units
             var colorScale = makeColorScale(MNCounties, expressed);
 
+            // Add enumeration units to the map
+            counties.attr("fill", function(d){
+                return colorScale(d.properties[expressed]);
+            });
 
-            //add enumeration units to the map
-            setEnumerationUnits(MNCounties, map, path, colorScale, expressed);
-
-
-            //add coordinated visualization to the map
+            // Add coordinated visualization (bar chart) to the map
             setChart(csvData, colorScale);
-
-            //function to create color scale generator
-            function makeColorScale(data, expressed) {
-                var colorClasses = [
-                    "#D4B9DA",
-                    "#C994C7",
-                    "#DF65B0",
-                    "#DD1C77",
-                    "#980043"
-                ];
-
-                //create color scale generator
-                var colorScale = d3.scaleQuantile()
-                    .range(colorClasses);
-
-                //build array of all values of the expressed attribute
-                var domainArray = [];
-                for (var i = 0; i < data.length; i++) {
-                    var val = parseFloat(data[i][expressed]);
-                    domainArray.push(val);
-                }
-
-                //assign array of expressed values as scale domain
-                colorScale.domain(domainArray);
-
-                console.log(colorScale)
-
-                return colorScale;
-
-            }
-
-
-//function to create coordinated bar chart
-            function setChart(csvData, colorScale){
-                //chart frame dimensions
-                var chartWidth = window.innerWidth * 0.425,
-                    chartHeight = 460;
-
-                //create a second svg element to hold the bar chart
-                var chart = d3.select("body")
-                    .append("svg")
-                    .attr("width", chartWidth)
-                    .attr("height", chartHeight)
-                    .attr("class", "chart");
-
-                //create a scale to size bars proportionally to frame
-                var yScale = d3.scaleLinear()
-                    .range([0, chartHeight])
-                    .domain([0, 105]);
-
-                //set bars for each province
-                var bars = chart.selectAll(".bars")
-                    .data(csvData)
-                    .enter()
-                    .append("rect")
-                    .sort(function(a, b){
-                        return a[expressed]-b[expressed]
-                    })
-                    .attr("class", function(d){
-                        return "bars " + d.adm1_code;
-                    })
-                    .attr("width", chartWidth / csvData.length - 1)
-                    .attr("x", function(d, i){
-                        return i * (chartWidth / csvData.length);
-                    })
-                    .attr("height", function(d){
-                        return yScale(parseFloat(d[expressed]));
-                    })
-                    .attr("y", function(d){
-                        return chartHeight - yScale(parseFloat(d[expressed]))
-
-                            .style("fill", function(d){
-                                return colorScale(d[expressed]);
-                            });
-
-                    });
-            };
-
-            function setEnumerationUnits(data, map, path, colorScale, expressed) {
-                var selectCounties = map.selectAll(".selectCounties")
-                    .data(MNCounties)
-                    .enter()
-                    .append("path")
-                    .attr("class", function(d){
-                        return ".selectCounties" + d.properties.adm1_code;
-                    })
-                    .attr("d", path)
-                    .style("fill", function(d){
-                        //  console.log(d);
-                        return colorScale(d.properties[expressed]);
-                    });
-            }
-
-
         }
+    }
+
+    // Function to create the color scale generator
+    function makeColorScale(data, expressed) {
+        // Color classes for the scale
+        var colorClasses = [
+            "#D4B9DA",
+            "#C994C7",
+            "#DF65B0",
+            "#DD1C77",
+            "#980043"
+        ];
+
+        // Create color scale generator
+        var colorScale = d3.scaleQuantile()
+            .range(colorClasses);
+
+        // Build array of all values of the expressed attribute
+        var domainArray = [];
+        for (var i = 0; i < data.length; i++) {
+            var val = parseFloat(data[i].properties[expressed]);
+            domainArray.push(val);
+        }
+
+        // Assign array of expressed values as scale domain
+        colorScale.domain(domainArray);
+
+        return colorScale;
+    }
+
+    // Function to create the coordinated bar chart
+    function setChart(csvData, colorScale) {
+        // Chart frame dimensions
+        var chartWidth = window.innerWidth * 0.425,
+            chartHeight = 460;
+
+        // Create a second SVG element to hold the bar chart
+        var chart = d3.select("#chart-container")
+            .append("svg")
+            .attr("width", chartWidth)
+            .attr("height", chartHeight)
+            .attr("class", "chart");
+
+        // Find the maximum data value for the expressed attribute to set up the yScale domain
+        var maxVal = d3.max(csvData, function(d) { return parseFloat(d[expressed]); });
+
+
+        // Create a scale to size bars proportionally to frame
+        var yScale = d3.scaleLinear()
+            .range([0, chartHeight])
+            .domain([0, maxVal]); //changed this from 105 to maxVal
+
+        // Set bars for each province
+        var bars = chart.selectAll(".bar")
+            .data(csvData)
+            .enter()
+            .append("rect")
+            .attr("class", "bar")
+            .attr("width", chartWidth / csvData.length - 1)
+            .attr("x", function(d, i){
+                return i * (chartWidth / csvData.length);
+            })
+            .attr("height", function(d){
+                return yScale(parseFloat(d[expressed]));
+            })
+            .attr("y", function(d){
+                return chartHeight - yScale(parseFloat(d[expressed]));
+            })
+            .style("fill", function(d){
+                return colorScale(d[expressed]);
+            });
     }
 })();
