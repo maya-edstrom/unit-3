@@ -87,6 +87,27 @@
 
             // Add coordinated visualization (bar chart) to the map
             setChart(csvData, colorScale);
+
+            function createDropdown(){
+                //add select element
+                var dropdown = d3.select("body")
+                    .append("select")
+                    .attr("class", "dropdown");
+
+                //add initial option
+                var titleOption = dropdown.append("option")
+                    .attr("class", "titleOption")
+                    .attr("disabled", "true")
+                    .text("Select Attribute");
+
+                //add attribute name options
+                var attrOptions = dropdown.selectAll("attrOptions")
+                    .data(attrArray)
+                    .enter()
+                    .append("option")
+                    .attr("value", function(d){ return d })
+                    .text(function(d){ return d });
+            };
         }
     }
 
@@ -157,7 +178,51 @@
                 return chartHeight - yScale(parseFloat(d[expressed]));
             })
             .style("fill", function(d){
-                return colorScale(d[expressed]);
+                return colorScale(d[expressed])
+            })
+            .on("mouseover",highlight)
+            .on("mouseover", dehighlight)
+
+        var numbers = chart.selectAll(".numbers")
+            .data(csvData)
+            .enter()
+            .append("text")
+            .sort(function(a, b){
+                return b[expressed]-a[expressed]
+            })
+            .attr("class", function(d){
+                return "numbers " + d.adm1_code;
+            })
+            .attr("text-anchor", "middle")
+            .attr("x", function(d, i){
+                var fraction = chartWidth / csvData.length;
+                return i * fraction + (fraction - 1) / 2;
+            })
+            .attr("y", function(d){
+                return chartHeight - yScale(parseFloat(d[expressed])) + 15;
+            })
+            .text(function(d){
+                return d[expressed];
+
+
             });
+
+        var chartTitle = chart.append("text")
+            .attr("x", 20)
+            .attr("y", 40)
+            .attr("class", "chartTitle")
+            .text("This county's total population is " + expressed[3]);
+    }
+
+    function highlight(d) {
+        d3.select()
+            .style("stroke","black")
+            .style("stroke-width","2px");
+    }
+
+    function dehighlight(d) {
+        d3.select()
+            .style("stroke","none")
+            .style("stroke-width","0px");
     }
 })();
